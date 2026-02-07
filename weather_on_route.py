@@ -3,6 +3,8 @@ import requests
 import numpy as np
 from typing import List, Tuple, Dict, Any, Optional
 from route_find import city_to_coordinates, osrm_route_100_points
+from risk import score_route_risk
+
 
 
 Coord = Tuple[float, float]  # (lat, lon)
@@ -142,7 +144,8 @@ def weather_on_route():
     start_country = input("Enter start country: ").strip()
     end_city = input("Enter end city: ").strip()
     end_country = input("Enter end country: ").strip()
-    date = input("Enter date (YYYY-MM-DD): ").strip()
+    latest_delivery_date = input("Enter latest delivery date (YYYY-MM-DD): ").strip()
+
 
     start_query = f"{start_city}, {start_country}"
     end_query = f"{end_city}, {end_country}"
@@ -161,13 +164,20 @@ def weather_on_route():
     route_points = osrm_route_100_points(start_coords, end_coords, n_points=100)
 
     # Fetch daily weather for each point -> numpy array
-    weather_np = weather_for_route_to_numpy(route_points, date)
+    weather_np = weather_for_route_to_numpy(route_points, latest_delivery_date)
+
+
+    # Score route risk (1-100) using the weather numpy array
+    route_risk_score = score_route_risk(weather_np, COLUMN_NAMES)
 
     print("\nNumPy array shape:", weather_np.shape)
     print("Column order:", COLUMN_NAMES)
     print("\nFull array:\n", weather_np)
 
+    print("\nRoute risk score (1-100):", route_risk_score)
+
     return weather_np
+
 
 
 if __name__ == "__main__":
