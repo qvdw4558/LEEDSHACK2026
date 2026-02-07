@@ -1,3 +1,3 @@
 #test hi github 
 
-print("hi")
+print("hi lucy")
