@@ -94,6 +94,6 @@ def score_route_risk(weather_np: np.ndarray, column_names: Sequence[str]) -> int
     point_risk = np.maximum(point_risk, snow_r)
     point_risk = _clip01(point_risk)
 
-    route_risk = float(np.quantile(point_risk, 0.90))
+    route_risk = float(np.quantile(point_risk, 0.75))
     score = int(round(1 + route_risk * 99))
     return max(1, min(100, score))
