@@ -170,10 +170,6 @@ def weather_on_route():
     # Score route risk (1-100) using the weather numpy array
     route_risk_score = score_route_risk(weather_np, COLUMN_NAMES)
 
-    print("\nNumPy array shape:", weather_np.shape)
-    print("Column order:", COLUMN_NAMES)
-    print("\nFull array:\n", weather_np)
-
     print("\nRoute risk score (1-100):", route_risk_score)
 
     return weather_np

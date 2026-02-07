@@ -1,6 +1,9 @@
 import numpy as np
 from typing import Sequence, Dict
 
+# Calibration: push scores lower without changing ordering too much
+RISK_GAMMA: float = 1   # >1 compresses mid/high risks downwards
+RISK_SCALE: float = 1  # <1 lowers overall level
 
 def _col_idx(column_names: Sequence[str]) -> Dict[str, int]:
     return {name: i for i, name in enumerate(column_names)}
@@ -94,6 +97,14 @@ def score_route_risk(weather_np: np.ndarray, column_names: Sequence[str]) -> int
     point_risk = np.maximum(point_risk, snow_r)
     point_risk = _clip01(point_risk)
 
-    route_risk = float(np.quantile(point_risk, 0.75))
-    score = int(round(1 + route_risk * 99))
+    route_risk = float(np.quantile(point_risk, 0.5))
+
+    # Apply calibration curve to weight the final score lower
+    # - gamma > 1 reduces mid/high values more than low values
+    # - scale < 1 lowers everything
+    calibrated = (route_risk ** RISK_GAMMA) * RISK_SCALE
+    calibrated = float(np.clip(calibrated, 0.0, 1.0))
+
+    score = int(round(1 + calibrated * 99))
     return max(1, min(100, score))
+
