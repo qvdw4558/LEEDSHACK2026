@@ -56,34 +56,14 @@ function appendBot(text) {
  *   { reply: string, state: { ship_from_city, ship_to_city, ship_time } }
  */
 async function callBackend(messagesSoFar, currentState) {
-  // ---- PLACEHOLDER LOGIC ----
-  // Simulate network delay
-  await new Promise(r => setTimeout(r, 250));
+ const res = await fetch("http://localhost:8000/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages: messagesSoFar, state: currentState })
+  });
 
-  // Pretend the "extractor" is updating state from the conversation.
-  // This is ONLY a stub so you can build the wiring now.
-  const lastUser = [...messagesSoFar].reverse().find(m => m.role === "user")?.content ?? "";
-
-  // super dumb extraction for demo (replace with Gemini extraction later)
-  const nextState = { ...currentState };
-
-  // e.g. "from Sheffield to London at 9:30"
-  const fromMatch = lastUser.match(/\bfrom\s+([A-Za-z\s]+?)(?=\s+to\b|$)/i);
-  const toMatch   = lastUser.match(/\bto\s+([A-Za-z\s]+?)(?=\s+at\b|$)/i);
-  const timeMatch = lastUser.match(/\bat\s+([0-9]{1,2}(:[0-9]{2})?\s*(am|pm)?)\b/i);
-
-  if (fromMatch) nextState.ship_from_city = fromMatch[1].trim();
-  if (toMatch)   nextState.ship_to_city   = toMatch[1].trim();
-  if (timeMatch) nextState.ship_time      = timeMatch[1].trim();
-
-  // If something is missing, bot asks for it (this is exactly what you’ll do later)
-  let reply = "Okay — ";
-  if (!nextState.ship_from_city) reply += "what city are you shipping from?";
-  else if (!nextState.ship_to_city) reply += "what city are you shipping to?";
-  else if (!nextState.ship_time) reply += "what time is it shipping?";
-  else reply += `shipping from ${nextState.ship_from_city} to ${nextState.ship_to_city} at ${nextState.ship_time}.`;
-
-  return { reply, state: nextState };
+  if (!res.ok) throw new Error("Backend error");
+  return await res.json(); // { reply, state }
 }
 
 chatForm.addEventListener("submit", async (e) => {
