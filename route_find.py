@@ -2,9 +2,30 @@ from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import requests
 from math import radians, sin, cos, asin, sqrt
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict
+from dataclasses import dataclass
 
 Coord = Tuple[float, float]  # (lat, lon)
+
+
+# --- New: record type + builder (from earlier) ---
+@dataclass
+class RoutePointRecord:
+    index: int
+    lat: float
+    lon: float
+    weather: Optional[Dict] = None
+
+
+def build_route_point_records(coordinates: List[Coord]) -> List[RoutePointRecord]:
+    """
+    Iterates through a list of (lat, lon) coordinates and returns a list of
+    RoutePointRecord objects, one per coordinate.
+    """
+    records: List[RoutePointRecord] = []
+    for idx, (lat, lon) in enumerate(coordinates):
+        records.append(RoutePointRecord(index=idx, lat=lat, lon=lon, weather=None))
+    return records
 
 
 def main():
@@ -26,11 +47,15 @@ def main():
         print(f"Could not geocode end location: {end_query}")
         return
 
-    route_points = osrm_route_100_points(start_coords, end_coords, n_points=100)
+    # route_points is already List[Coord] in (lat, lon) format ✅
+    route_points: List[Coord] = osrm_route_25_points(start_coords, end_coords, n_points=25)
 
-    print("\n100 evenly spaced coordinates along the route (lat, lon):")
-    for i, (lat, lon) in enumerate(route_points, start=1):
-        print(f"{i:03d}: {lat:.6f}, {lon:.6f}")
+    # --- New: convert coords -> records (format the earlier code accepts) ---
+    route_point_records: List[RoutePointRecord] = build_route_point_records(route_points)
+
+    print("\n100 route point records:")
+    for rec in route_point_records:
+        print(f"{rec.index:03d}: {rec.lat:.6f}, {rec.lon:.6f} | weather={rec.weather}")
 
 
 def city_to_coordinates(city_name: str) -> Optional[Coord]:
