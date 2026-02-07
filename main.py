@@ -1,3 +1,2 @@
-#test hi github 
-
-print("hi")
+from route_find import *
+main()
