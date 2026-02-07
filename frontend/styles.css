@@ -55,7 +55,7 @@ body {
   place-items: center;
   background: rgba(255,255,255,0.18);
   border: 1px solid rgba(255,255,255,0.25);
-  color: #0d1b5e; /* icon color */
+  color: #0d1b5e;
 }
 
 .avatar.small {
@@ -119,13 +119,8 @@ body {
   margin: 10px 0;
 }
 
-.msg-bot {
-  align-items: flex-start;
-}
-
-.msg-user {
-  justify-content: flex-end;
-}
+.msg-bot { align-items: flex-start; }
+.msg-user { justify-content: flex-end; }
 
 /* avatar column for bot messages */
 .msg-avatar { width: 30px; display: flex; justify-content: center; }
@@ -197,7 +192,7 @@ body {
 }
 
 .chat-input {
-  width: 100%;
+  flex: 1;
   padding: 12px 12px;
   border-radius: 12px;
   border: 1px solid rgba(16, 10, 33, 0.12);
@@ -208,6 +203,18 @@ body {
   border-color: rgba(179,106,223,0.7);
   box-shadow: 0 0 0 4px rgba(179,106,223,0.18);
 }
+
+.send-btn {
+  appearance: none;
+  border: 0;
+  background: #b36adf;
+  color: #fff;
+  font-weight: 700;
+  padding: 12px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.send-btn:active { transform: translateY(1px); }
 
 .footer-brand {
   font-size: 12px;
