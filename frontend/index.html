@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chatbot UI Frame</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="chat-shell" aria-label="AI Chatbot">
+      <!-- Header -->
+      <header class="chat-header">
+        <div class="header-left">
+          <div class="avatar" aria-hidden="true">
+            <!-- simple bot icon -->
+            <svg viewBox="0 0 64 64" width="22" height="22" role="img" aria-label="Bot">
+              <circle cx="32" cy="20" r="6" fill="currentColor" opacity="0.95"/>
+              <rect x="14" y="24" width="36" height="26" rx="10" fill="currentColor" opacity="0.95"/>
+              <rect x="10" y="28" width="44" height="22" rx="11" fill="white" opacity="0.25"/>
+              <circle cx="26" cy="37" r="3" fill="white"/>
+              <circle cx="38" cy="37" r="3" fill="white"/>
+              <rect x="28" y="44" width="8" height="2.8" rx="1.4" fill="white" opacity="0.8"/>
+              <rect x="31" y="7" width="2" height="8" rx="1" fill="currentColor" opacity="0.95"/>
+            </svg>
+          </div>
+          <div class="header-meta">
+            <div class="bot-name">Shippy</div>
+            <div class="status">
+              <span class="dot" aria-hidden="true"></span>
+              <span>Online Now</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-actions" aria-hidden="true">
+          <button class="icon-btn" title="More" type="button">•••</button>
+          <button class="icon-btn" title="Close" type="button">✕</button>
+        </div>
+      </header>
+
+      <!-- Body -->
+      <div class="chat-body" id="chatBody">
+       
+      </div>
+
+      <!-- Footer (now a form) -->
+      <footer class="chat-footer">
+        <form class="input-wrap" id="chatForm" autocomplete="off">
+          <input
+            class="chat-input"
+            id="chatInput"
+            type="text"
+            placeholder="Reply to LeadBot..."
+            maxlength="500"
+          />
+          <button class="send-btn" id="sendBtn" type="submit">Send</button>
+        </form>
+
+      </footer>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
