@@ -271,3 +271,55 @@ def generate_efficiency_vs_risk_async(
     t.start()
 
     return {"status": "running", "out_path": out_path, "plot_url": plot_url}
+
+
+
+
+#--------------------------------------------------------------------
+#// ---------- BARCHART!!!!!: risk by date (bar chart) ----------//
+#---------------------------------------------------------------------
+
+
+def plot_risk_bar_chart(
+    points,
+    out_path="risk_by_date.png",
+    title="Risk by Departure Date"
+):
+    """
+    points: list of dicts like:
+      {"label": "2026-02-08", "hours": 120.5, "risk": 62}
+
+    Saves a bar chart PNG and returns the output path.
+    """
+
+    if not points:
+        raise ValueError("No points to plot.")
+
+    import matplotlib.pyplot as plt
+
+    labels = [p["label"] for p in points]
+    risks = [p["risk"] for p in points]
+
+    plt.figure(figsize=(8, 5))
+    bars = plt.bar(labels, risks)
+
+    # Add value labels on top of bars
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(
+            bar.get_x() + bar.get_width() / 2,
+            height,
+            f"{int(height)}",
+            ha="center",
+            va="bottom",
+            fontsize=9
+        )
+
+    plt.xlabel("Departure date")
+    plt.ylabel("Route risk score (1–100)")
+    plt.title(title)
+    plt.grid(axis="y", alpha=0.3)
+
+    plt.savefig(out_path, dpi=200, bbox_inches="tight")
+    plt.close()
+    return out_path
