@@ -1,85 +1,125 @@
-import os
 import json
+from pathlib import Path
 from dotenv import load_dotenv
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from google import genai
 
+from google import genai
+from cleaner import clean_shipment
+
+# Load environment variables (expects GEMINI_API_KEY in .env)
 load_dotenv()
 
 app = FastAPI()
 
-# Dev CORS: lets your VS Code Live Server hit the API
+# Dev-only CORS (lets Live Server / local frontend call the API)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # tighten later
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Gemini client (picks up GEMINI_API_KEY from env)
+# Gemini client uses GEMINI_API_KEY from env
 client = genai.Client()
 
-MODEL_CHAT = "gemini-2.5-flash"   # stable + fast :contentReference[oaicite:6]{index=6}
-MODEL_EXTRACT = "gemini-2.5-flash"
+# Cheap + fast model
+MODEL = "gemini-2.5-flash"
+
 
 class Msg(BaseModel):
-    role: str  # "user" | "assistant"
+    role: str  # "user" or "assistant"
     content: str
+
 
 class ChatPayload(BaseModel):
     messages: list[Msg]
-    state: dict | None = None
+
 
 def flatten(messages: list[Msg]) -> str:
-    """Simple text transcript. Good enough for v1."""
-    out = []
-    for m in messages:
-        out.append(f"{m.role.upper()}: {m.content}")
-    return "\n".join(out)
+    """Flatten role/content messages into a simple transcript string."""
+    return "\n".join(f"{m.role.upper()}: {m.content}" for m in messages)
+
 
 def parse_json_loose(text: str) -> dict:
-    """Handles plain JSON or JSON fenced in ```json ... ```."""
-    t = text.strip()
+    """
+    Parses JSON even if wrapped in ```json fences.
+    Returns {} if parsing fails.
+    """
+    t = (text or "").strip()
+
     if t.startswith("```"):
+        # remove triple backticks
         t = t.strip("`")
-        # if it begins with 'json\n{...'
-        t = t.split("\n", 1)[-1].strip()
+        # drop optional "json" line
+        if "\n" in t:
+            t = t.split("\n", 1)[1].strip()
+
     try:
         return json.loads(t)
     except Exception:
-        return {"ship_from_city": None, "ship_to_city": None, "ship_time": None}
+        return {}
+
 
 @app.post("/chat")
 def chat(payload: ChatPayload):
     transcript = flatten(payload.messages)
 
-    # 1) Natural chatbot reply
-    reply_resp = client.models.generate_content(
-        model=MODEL_CHAT,
-        contents=(
-            "You are a shipping assistant. Be concise and ask for missing details.\n\n"
-            f"Conversation so far:\n{transcript}\n\n"
-            "Respond to the user."
-        ),
-    )
-    reply_text = (reply_resp.text or "").strip()
+    prompt = f"""
+You are a shipping assistant.
 
-    # 2) Structured extraction (JSON)
-    # Gemini supports structured outputs; for now we keep it simple: force JSON-only. :contentReference[oaicite:7]{index=7}
-    extract_resp = client.models.generate_content(
-        model=MODEL_EXTRACT,
-        contents=(
-            "Return ONLY valid JSON. No markdown. No extra text.\n"
-            "Extract these fields from the conversation:\n"
-            "- ship_from_city (string or null)\n"
-            "- ship_to_city (string or null)\n"
-            "- ship_time (string or null)  # store raw if unclear (e.g. 'Wednesday 14th March')\n\n"
-            f"Conversation:\n{transcript}\n"
-        ),
-    )
-    extracted = parse_json_loose(extract_resp.text or "")
+You must do TWO things:
+1) Write a short helpful reply to the user, asking ONLY for missing details among:
+   - ship_from_city
+   - ship_to_city
+   - ship_date
+2) Extract shipment details from the conversation.
 
-    return {"reply": reply_text, "state": extracted}
+Return ONLY valid JSON in EXACTLY this format (no markdown, no extra text):
+{{
+  "reply": "string",
+  "shipment": {{
+    "ship_from_city": "string or null",
+    "ship_to_city": "string or null",
+    "ship_date": "YYYY-MM-DD or null"
+  }}
+}}
+
+Rules:
+- If unknown, use null.
+- If the user gave a date like 'Saturday 7th Feb 2026', convert it to YYYY-MM-DD if you can.
+- Do not ask for package weight/dimensions; only focus on from/to/date.
+
+Conversation:
+{transcript}
+""".strip()
+
+    try:
+        resp = client.models.generate_content(model=MODEL, contents=prompt)
+    except Exception as e:
+        # If Gemini call fails, don't crash the app
+        print("Gemini error:", repr(e))
+        return {
+            "reply": "Temporary connection issue to the AI service. Please send that again.",
+            "shipment": {"ship_from_city": None, "ship_to_city": None, "ship_date": None},
+            "error": str(e),
+        }
+
+    data = parse_json_loose(resp.text or "")
+
+    reply = (data.get("reply") or "").strip()
+
+    shipment_raw = data.get("shipment") if isinstance(data.get("shipment"), dict) else {}
+    shipment_clean = clean_shipment(shipment_raw)
+
+    # Persist JSON for other scripts
+    out_dir = Path("out")
+    out_dir.mkdir(exist_ok=True)
+    (out_dir / "latest_shipment.json").write_text(
+        json.dumps(shipment_clean, indent=2),
+        encoding="utf-8",
+    )
+
+    return {"reply": reply, "shipment": shipment_clean}
