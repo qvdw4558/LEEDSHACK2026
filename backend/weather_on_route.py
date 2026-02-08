@@ -161,16 +161,24 @@ def weather_on_route():
         return None
 
     # Get 100 points along the route (List[Tuple[lat, lon]])
-    route_points = osrm_route_100_points(start_coords, end_coords, n_points=100)
+    N_POINTS = 25
+    route_points = osrm_route_100_points(start_coords, end_coords, n_points=N_POINTS)
+
 
     # Fetch daily weather for each point -> numpy array
     weather_np = weather_for_route_to_numpy(route_points, latest_delivery_date)
 
 
     # Score route risk (1-100) using the weather numpy array
-    route_risk_score = score_route_risk(weather_np, COLUMN_NAMES)
+    from c_risk import score_route_in_c
 
-    print("\nRoute risk score (1-100):", route_risk_score)
+    score, label = score_route_in_c(weather_np)
+    print("Route risk score (C):", score)
+    print("Risk assessment:", label)
+
+
+    print("\nRoute risk score (1-100):", score)
+
 
     return weather_np
 
