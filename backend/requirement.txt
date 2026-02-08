@@ -3,3 +3,6 @@ uvicorn
 python-dotenv
 google-genai
 python-dateutil
+numpy
+requests
+geopy

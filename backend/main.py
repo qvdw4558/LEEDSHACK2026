@@ -9,6 +9,9 @@ from pydantic import BaseModel
 from google import genai
 from cleaner import clean_shipment
 
+from analysis_pipeline import run_analysis
+
+
 # Load environment variables (expects GEMINI_API_KEY in .env)
 load_dotenv()
 
@@ -114,6 +117,27 @@ Conversation:
     shipment_raw = data.get("shipment") if isinstance(data.get("shipment"), dict) else {}
     shipment_clean = clean_shipment(shipment_raw)
 
+    analysis = None
+    if shipment_clean["ship_from_city"] and shipment_clean["ship_to_city"] and shipment_clean["ship_date"]:
+        try:
+            analysis = run_analysis(
+                shipment_clean["ship_from_city"],
+                shipment_clean["ship_to_city"],
+                shipment_clean["ship_date"],
+            )
+
+            # Simple: append analysis into the reply (no extra Gemini call)
+            reply = (
+                reply
+                + f"\n\nRoute risk: {analysis['risk_score']}/100 ({analysis['risk_level']})."
+            )
+
+        except Exception as e:
+            # Don't crash the chatbot if analysis fails
+            analysis = {"error": str(e)}
+            reply = reply + "\n\nI couldn’t run route analysis right now (service error)."
+
+
     # Persist JSON for other scripts
     out_dir = Path("out")
     out_dir.mkdir(exist_ok=True)
@@ -122,4 +146,5 @@ Conversation:
         encoding="utf-8",
     )
 
-    return {"reply": reply, "shipment": shipment_clean}
+    return {"reply": reply, "shipment": shipment_clean, "analysis": analysis}
+

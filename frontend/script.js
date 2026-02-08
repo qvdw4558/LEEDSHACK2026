@@ -93,6 +93,7 @@ chatForm.addEventListener("submit", async (e) => {
         ship_date: result.shipment.ship_date ?? null
       };
       renderShipment();
+      console.log("analysis:", result.analysis);
     }
 
   } catch (err) {
