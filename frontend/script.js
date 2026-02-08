@@ -5,31 +5,29 @@ const chatInput = document.getElementById("chatInput");
 const tplUserMsg = document.getElementById("tplUserMsg");
 const tplBotMsg  = document.getElementById("tplBotMsg");
 
-// Debug panel (optional)
+// Extracted panel
 const fromCityEl = document.getElementById("fromCity");
 const toCityEl   = document.getElementById("toCity");
-const shipTimeEl = document.getElementById("shipTime");
+const shipDateEl = document.getElementById("shipDate");
 
-// 1) Conversation memory for Gemini later
-// Keep it simple: role + content
+// Conversation memory (sent to backend each turn)
 const messages = [];
 
-// 2) Extracted variables state (what you'll pass to python backend)
-let extractedState = {
+// Latest canonical shipment state
+let shipmentState = {
   ship_from_city: null,
   ship_to_city: null,
-  ship_time: null
+  ship_date: null
 };
 
 function scrollToBottom() {
   chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-function renderState() {
-  if (!fromCityEl) return; // panel optional
-  fromCityEl.textContent = extractedState.ship_from_city ?? "—";
-  toCityEl.textContent   = extractedState.ship_to_city ?? "—";
-  shipTimeEl.textContent = extractedState.ship_time ?? "—";
+function renderShipment() {
+  fromCityEl.textContent = shipmentState.ship_from_city ?? "—";
+  toCityEl.textContent   = shipmentState.ship_to_city ?? "—";
+  shipDateEl.textContent = shipmentState.ship_date ?? "—";
 }
 
 function appendUser(text) {
@@ -46,68 +44,68 @@ function appendBot(text) {
   scrollToBottom();
 }
 
-/**
- * Placeholder backend call.
- *
- * Later you will replace this with:
- *   fetch("/chat", { method:"POST", headers:{...}, body: JSON.stringify({ messages, state }) })
- *
- * Expected return shape:
- *   { reply: string, state: { ship_from_city, ship_to_city, ship_time } }
- */
-async function callBackend(messagesSoFar, currentState) {
- const res = await fetch("http://localhost:8000/chat", {
+async function callBackend(messagesSoFar) {
+  const res = await fetch("http://localhost:8000/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages: messagesSoFar, state: currentState })
+    body: JSON.stringify({ messages: messagesSoFar })
   });
 
-  if (!res.ok) throw new Error("Backend error");
-  return await res.json(); // { reply, state }
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Backend error ${res.status}: ${txt}`);
+  }
+
+  return await res.json(); // { reply, shipment, (optional error) }
 }
+
+let inFlight = false;
 
 chatForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (inFlight) return;
 
   const text = chatInput.value.trim();
   if (!text) return;
 
-  // Record user message
+  // record + render user
   messages.push({ role: "user", content: text });
-
-  // Show user message immediately
   appendUser(text);
   chatInput.value = "";
 
-  // Disable input while "backend" runs
+  inFlight = true;
   chatInput.disabled = true;
   chatForm.querySelector("button[type='submit']").disabled = true;
 
   try {
-    // Backend returns bot reply + updated extracted variables
-    const result = await callBackend(messages, extractedState);
+    const result = await callBackend(messages);
 
-    // Record + render bot message
-    messages.push({ role: "assistant", content: result.reply });
-    appendBot(result.reply);
+    // render bot reply
+    const reply = result.reply || "Temporary issue. Try again.";
+    messages.push({ role: "assistant", content: reply });
+    appendBot(reply);
 
-    // Update extracted state
-    extractedState = result.state;
-    renderState();
+    // update shipment state
+    if (result.shipment) {
+      shipmentState = {
+        ship_from_city: result.shipment.ship_from_city ?? null,
+        ship_to_city: result.shipment.ship_to_city ?? null,
+        ship_date: result.shipment.ship_date ?? null
+      };
+      renderShipment();
+    }
 
-    // In the real version, you also POST extractedState to your python processing
-    // or include it in the same /chat response like above.
   } catch (err) {
-    appendBot("Something went wrong. Try again.");
     console.error(err);
+    appendBot("Temporary connection issue. Send again.");
   } finally {
+    inFlight = false;
     chatInput.disabled = false;
     chatForm.querySelector("button[type='submit']").disabled = false;
     chatInput.focus();
   }
 });
 
-// nice: submit on Enter
 chatInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -115,6 +113,6 @@ chatInput.addEventListener("keydown", (e) => {
   }
 });
 
-// initial render
-renderState();
-appendBot("Hey — tell me where you’re shipping from, where to, and when.");
+// initial
+renderShipment();
+appendBot("Hey — tell me where you’re shipping from, where to, and what date.");

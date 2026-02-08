@@ -9,7 +9,6 @@
 <body>
   <main class="page">
     <section class="chat-shell" aria-label="AI Chatbot">
-      <!-- Header -->
       <header class="chat-header">
         <div class="header-left">
           <div class="avatar" aria-hidden="true">
@@ -38,12 +37,10 @@
         </div>
       </header>
 
-      <!-- Body -->
       <div class="chat-body" id="chatBody">
         <!-- Messages injected by script.js -->
       </div>
 
-      <!-- Footer -->
       <footer class="chat-footer">
         <form class="input-wrap" id="chatForm" autocomplete="off">
           <input
@@ -56,12 +53,11 @@
           <button class="send-btn" id="sendBtn" type="submit">Send</button>
         </form>
 
-        <!-- Optional: shows extracted variables live (super useful for debugging) -->
         <div class="extract-panel" id="extractPanel" aria-live="polite">
           <div class="extract-title">Extracted</div>
           <div class="extract-row"><span>From:</span> <strong id="fromCity">—</strong></div>
           <div class="extract-row"><span>To:</span> <strong id="toCity">—</strong></div>
-          <div class="extract-row"><span>Time:</span> <strong id="shipTime">—</strong></div>
+          <div class="extract-row"><span>Date:</span> <strong id="shipDate">—</strong></div>
         </div>
 
         <div class="footer-brand" aria-hidden="true">
@@ -71,7 +67,6 @@
     </section>
   </main>
 
-  <!-- Tiny templates so JS can clone cleanly -->
   <template id="tplUserMsg">
     <article class="msg msg-user">
       <div class="bubble bubble-user">
